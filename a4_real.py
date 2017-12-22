@@ -60,7 +60,7 @@ qualitative_1 = pd.DataFrame(encoder.fit_transform(qualitative_1),index=qualitat
 imputer=Imputer(strategy='mean')
 quantitative_1 = pd.DataFrame(imputer.fit_transform(quantitative_1),index=quantitative_1.index)
 #数据变换（升维）
-pf=PolynomialFeatures(degree=2,interaction_only=True,include_bias=False)
+pf=PolynomialFeatures(degree=3,interaction_only=True,include_bias=False)
 quantitative_1 = pd.DataFrame(pf.fit_transform(quantitative_1),index=quantitative_1.index)
 
 #定性和定量合并
@@ -110,7 +110,7 @@ params = {
             'max_depth':7,
             'min_child_weight':1
             }
-num_rounds=3000
+num_rounds=2000
 clf=xgb.train(params,dtrain,num_rounds,watchlist, feval=evalerror)
 
 '''
