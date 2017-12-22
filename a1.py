@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.feature_selection import GenericUnivariateSelect
+from sklearn.feature_selection import SelectPercentile,GenericUnivariateSelect
 import math
 
 way_data='/media/m/文档/House Prices/data/'
@@ -104,10 +104,24 @@ for j in range(num_columns):
 
         #example=train1_x[i][train1_x[i].notnull()].values[0]
         #print(type(example))
-        
-gus=GenericUnivariateSelect(param=10)
+'''       
+sp=SelectPercentile()	#percentile=10
+params=[1,2,5,10,15,20,25,30,35,40,50,60,70,80]
+grid=GridSearchCV(sp,{'percentile':params})
+train_x=grid.fit(train_x,train1_y).transform(train_x)
+#test1_x=gus.transform(test1_x) 
+'''
+
+'''
+gus=GenericUnivariateSelect(param=40)
 train_x=gus.fit_transform(train_x,train1_y) 
 #test1_x=gus.transform(test1_x) 
+'''
+
+'''
+pca=PCA(n_components=25)
+train_x=pca.fit_transform(train_x,train1_y) 
+'''
 
 
 ########################
@@ -134,7 +148,7 @@ params = {
             'alpha' : 0.5,
             'max_depth':9
             }
-num_rounds=500
+num_rounds=1000
 
 #clf=xgb.train(params,dtrain,num_rounds,watchlist)
 clf=xgb.train(params,dtrain,num_rounds,watchlist)
