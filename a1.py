@@ -13,6 +13,9 @@ import xgboost as xgb
 from sklearn.model_selection import train_test_split
 #from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import mean_squared_error
+from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.feature_selection import GenericUnivariateSelect
 import math
 
 way_data='/media/m/文档/House Prices/data/'
@@ -28,13 +31,24 @@ test0_x=test0
 ##########################################
 
 
+
 # copy
 train1_x=train0_x.copy()
 test1_x=test0_x.copy()
 train1_y=train0_y.apply(float)/800000
+# 删有nan的列
+train1_x=train1_x.dropna(axis=1,how='any')
+#train1_x=train1_x.drop(['Heating','ExterCond','Exterior1st','Exterior2nd','Condition2','RoofMatl'],axis=1)
 
 
-train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.2)
+
+
+
+train_x=train1_x
+
+
+
+#train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.4)
 
 
 ##########################################
@@ -50,25 +64,28 @@ for j in range(num_columns):
     
     
     # jiangwei 
+    '''
     if float(sum(train_x[i].value_counts())) / len(train_x[i]) < 0.7:	#不能有太多nan
         print('///////////////**********///////')
         train_x.drop(i,inplace=True,axis=1)
         test_x.drop(i,inplace=True,axis=1)
         test1_x.drop(i,inplace=True,axis=1)
         continue
+    
     if float(len(train_x[i].unique())) / len(train_x[i]) > 0.3:		#种类不能太多
         print('KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK')
         train_x.drop(i,inplace=True,axis=1)
         test_x.drop(i,inplace=True,axis=1)
         test1_x.drop(i,inplace=True,axis=1)
         continue
+    
     if float(train_x[i].value_counts().values[0]) / len(train_x[i]) > 0.7:		#不能出现一个寡头
         print('ddddddddddddddddddddddddddddddddd')
         train_x.drop(i,inplace=True,axis=1)
         test_x.drop(i,inplace=True,axis=1)
         test1_x.drop(i,inplace=True,axis=1)
         continue
-
+    '''
 
     #if type(example) not in [int, float, bool]:
     #if type(example) == str:
@@ -79,19 +96,23 @@ for j in range(num_columns):
         train_x[i][train_x[i].notnull()]=lbl.fit_transform(train_x[i][train_x[i].notnull()])
         train_x[i] = train_x[i].convert_objects(convert_numeric=True)
         
-        test_x[i][test_x[i].notnull()]=lbl.transform(test_x[i][test_x[i].notnull()])
-        test_x[i] = test_x[i].convert_objects(convert_numeric=True)
+        #test_x[i][test_x[i].notnull()]=lbl.transform(test_x[i][test_x[i].notnull()])
+        #test_x[i] = test_x[i].convert_objects(convert_numeric=True)
         
-        test1_x[i][test1_x[i].notnull()]=lbl.transform(test1_x[i][test1_x[i].notnull()])
-        test1_x[i] = test1_x[i].convert_objects(convert_numeric=True)
+        #test1_x[i][test1_x[i].notnull()]=lbl.transform(test1_x[i][test1_x[i].notnull()])
+        #test1_x[i] = test1_x[i].convert_objects(convert_numeric=True)
 
         #example=train1_x[i][train1_x[i].notnull()].values[0]
         #print(type(example))
-    
-    
+        
+gus=GenericUnivariateSelect(param=10)
+train_x=gus.fit_transform(train_x,train1_y) 
+#test1_x=gus.transform(test1_x) 
+
+
 ########################
 
-#train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.2)
+train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train_x,train1_y,test_size=0.5)
 
 ########################
 dtrain=xgb.DMatrix(train_x,train_y)
@@ -121,8 +142,8 @@ clf=xgb.train(params,dtrain,num_rounds,watchlist)
 
 #self rate test
 dtest_x_self=xgb.DMatrix(test_x)
-test_y_pred=pd.Series(clf.predict(dtest_x_self),index=test_x.index)
-test_y_pred=test_y_pred#*800000
+test_y_pred=pd.Series(clf.predict(dtest_x_self),index=test_y_real.index)
+#test_y_pred=test_y_pred*800000
 
 print(math.sqrt(mean_squared_error(test_y_pred,test_y_real)))
 
