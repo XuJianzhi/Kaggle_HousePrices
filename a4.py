@@ -75,37 +75,27 @@ train1_y=train0_y.copy()
 #train1_y=train0_y.apply(float)
 '''
 #判别分析（降维）
-skb=SelectKBest(chi2,k=700)
+skb=SelectKBest(chi2,k=400)
 all_2=skb.fit_transform(train1_x,train1_y)
 '''
 ########################
 train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.5)
 ########################
-dtrain=xgb.DMatrix(train_x,train_y)
-dtest=xgb.DMatrix(test_x)	###
+'''
+#判别分析（降维）
+skb=SelectKBest(chi2,k=3000)		###
+train_x=skb.fit_transform(train_x,train_y)
+test_x=skb.transform(test_x)
+'''
 
-watchlist=[(dtrain,'train'),(dtrain,'test')]
+dtrain=xgb.DMatrix(train_x,train_y)
+dtest=xgb.DMatrix(test_x,test_y_real)	###
+
+watchlist=[(dtrain,'train'),(dtest,'test')]
 #num_class=train_y.max()+1  
 
 
 
-
-
-'''
-def logregobj(preds, dtrain):
-    labels = dtrain.get_label()
-    preds = 1.0 / (1.0 + np.exp(-preds))
-    grad = preds - labels
-    hess = preds * (1.0 - preds)
-    return grad, hess
-
-
-def evalerror(preds, dtrain):
-    labels = dtrain.get_label()
-    # return a pair metric_name, result
-    # since preds are margin(before logistic transformation, cutoff at 0)
-    return 'error', float(sum(labels != (preds > 0.0))) / len(labels)
-'''
 
 def evalerror(preds, dtrain):
     labels = dtrain.get_label()
@@ -118,9 +108,6 @@ def evalerror(preds, dtrain):
 params = {
             'objective': 'reg:gamma',
             'eta': 0.01,
-            #'eval_metric': 'rmse',
-            #'eval_metric':evalerror,
-            #'eval_metric': 'mlogloss',
             'seed': 0,
             'missing': -999,
             #'num_class':num_class,
@@ -133,15 +120,15 @@ params = {
             }
 num_rounds=3000
 clf=xgb.train(params,dtrain,num_rounds,watchlist, feval=evalerror)
+
+'''
 #self rate test
 dtest_x_self=xgb.DMatrix(test_x)
 test_y_pred=pd.Series(clf.predict(dtest_x_self),index=test_y_real.index)
 #test_y_pred=test_y_pred*800000
 
 print(math.sqrt(mean_squared_log_error(test_y_pred,test_y_real)))
-
-
-
+'''
 
 
 
