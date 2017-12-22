@@ -1,4 +1,4 @@
-
+#7 删列 改为 换成0
 
 
 #!/usr/bin/python
@@ -13,7 +13,10 @@ import xgboost as xgb
 from sklearn.model_selection import train_test_split
 #from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import mean_squared_error
-
+from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.feature_selection import SelectPercentile,GenericUnivariateSelect
+import math
 
 way_data='/media/m/文档/House Prices/data/'
 train0=pd.read_csv(way_data+'train.csv')
@@ -25,63 +28,112 @@ train0_x=train0.iloc[:,:-1]
 train0_y=train0.SalePrice
 test0_x=test0
 
+##########################################
+
+
+
 # copy
 train1_x=train0_x.copy()
 test1_x=test0_x.copy()
+train1_y=train0_y.apply(float)/800000
+'''
+# 删有nan的列
+train1_x=train1_x.dropna(axis=1,how='any')
+#train1_x=train1_x.drop(['Heating','ExterCond','Exterior1st','Exterior2nd','Condition2','RoofMatl'],axis=1)
+'''
+# 换nan为0
+#not_0=train1_x.isnull().sum()[train1_x.isnull().sum()==0]
+have_nan=train1_x.isnull().sum()[train1_x.isnull().sum()!=0]
+test1_x[have_nan.index].fillna(0,inplace=True)
+test1_x.fillna(method='ffill',inplace=True)
+train1_x.fillna(0,inplace=True)
 
+
+
+
+train_x=train1_x
+
+
+
+#train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.4)
+
+
+##########################################
+
+num_columns=len(train_x.columns)
+columns_train_x=train_x.columns
 # change type to int
-for j in range(len(train1_x.columns)):
-    i=train1_x.columns[j]
-    #print('j='+str(j)+',,,i='+i)
+for j in range(num_columns):
+    i=columns_train_x[j]
+    print('j='+str(j)+',,,i='+i)
     #example=train1_x[i][train1_x[i].notnull()].values[0]
-    print(train1_x[i].dtype)
+    print(train_x[i].dtype)
+    
+    
+    # jiangwei 
+    '''
+    if float(sum(train_x[i].value_counts())) / len(train_x[i]) < 0.7:	#不能有太多nan
+        print('///////////////**********///////')
+        train_x.drop(i,inplace=True,axis=1)
+        test_x.drop(i,inplace=True,axis=1)
+        test1_x.drop(i,inplace=True,axis=1)
+        continue
+    
+    if float(len(train_x[i].unique())) / len(train_x[i]) > 0.3:		#种类不能太多
+        print('KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK')
+        train_x.drop(i,inplace=True,axis=1)
+        test_x.drop(i,inplace=True,axis=1)
+        test1_x.drop(i,inplace=True,axis=1)
+        continue
+    
+    if float(train_x[i].value_counts().values[0]) / len(train_x[i]) > 0.7:		#不能出现一个寡头
+        print('ddddddddddddddddddddddddddddddddd')
+        train_x.drop(i,inplace=True,axis=1)
+        test_x.drop(i,inplace=True,axis=1)
+        test1_x.drop(i,inplace=True,axis=1)
+        continue
+    '''
+
     #if type(example) not in [int, float, bool]:
     #if type(example) == str:
-    if train1_x[i].dtype == 'object':
+    if train_x[i].dtype == 'object':
         print('j='+str(j)+',,,i='+i+',,,1111')
         # encoder start
         lbl=sk.preprocessing.LabelEncoder()
-        train1_x[i][train1_x[i].notnull()]=lbl.fit_transform(train1_x[i][train1_x[i].notnull()])
-        train1_x[i] = train1_x[i].convert_objects(convert_numeric=True)
-        test1_x[i][test1_x[i].notnull()]=lbl.transform(test1_x[i][test1_x[i].notnull()])
-        test1_x[i] = test1_x[i].convert_objects(convert_numeric=True)
+        train_x[i][train_x[i].notnull()]=lbl.fit_transform(train_x[i][train_x[i].notnull()])
+        train_x[i] = train_x[i].convert_objects(convert_numeric=True)
+        
+        #test_x[i][test_x[i].notnull()]=lbl.transform(test_x[i][test_x[i].notnull()])
+        #test_x[i] = test_x[i].convert_objects(convert_numeric=True)
+        
+        #test1_x[i][test1_x[i].notnull()]=lbl.transform(test1_x[i][test1_x[i].notnull()])
+        #test1_x[i] = test1_x[i].convert_objects(convert_numeric=True)
 
         #example=train1_x[i][train1_x[i].notnull()].values[0]
         #print(type(example))
-    '''
-    elif type(example) == np.float64 :
-        print('j='+str(j)+',,,i='+i+',,,2222')
-        #train1_x[i][train1_x[i].notnull()]=train1_x[i][train1_x[i].notnull()].astype(type('float', (float,), {}))
-        train1_x[i]=train1_x[i].astype(type('float', (float,), {}))
-
-        example=train1_x[i][train1_x[i].notnull()].values[0]
-        print(type(example))
-
-    elif type(example) == np.int64 :
-        print('j='+str(j)+',,,i='+i+',,,3333')
-        #xuanze=train1_x[i].notnull()
-        #temp=train1_x[i].copy()[xuanze]
-        train1_x[i]=train1_x[i].astype(type('int', (int,), {}))
-        #train1_x[i][train1_x[i].notnull()]=train1_x[i][train1_x[i].notnull()].astype(float)
-        #train1_x[i][train1_x[i].notnull()]=train1_x[i][train1_x[i].notnull()].astype(type('float', (float,), {}))
-
-        example=train1_x[i][train1_x[i].notnull()].values[0]
-        print(type(example))
-
-    else :
-        print('j='+str(j)+',,,i='+i+',,,4444')
-    '''
-    
-    # jiangwei 
-    #if float(sum(train1_x[i].value_counts().values[:3]))/len(train1_x[i]) < 0.5:
-    #    train1_x[i].drop(i,inplace=True)
+'''       
+sp=SelectPercentile()	#percentile=10
+params=[1,2,5,10,15,20,25,30,35,40,50,60,70,80]
+grid=GridSearchCV(sp,{'percentile':params})
+train_x=grid.fit(train_x,train1_y).transform(train_x)
+#test1_x=gus.transform(test1_x) 
+'''
 
 
+gus=GenericUnivariateSelect(param=20)
+train_x=gus.fit_transform(train_x,train1_y) 
+#test1_x=gus.transform(test1_x) 
 
-train1_y=train0_y.apply(float)/800000
+
+'''
+pca=PCA(n_components=30)
+train_x=pca.fit_transform(train_x,train1_y) 
+'''
+
+
 ########################
 
-train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.2)
+train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train_x,train1_y,test_size=0.5)
 
 ########################
 dtrain=xgb.DMatrix(train_x,train_y)
@@ -90,87 +142,50 @@ dtest=xgb.DMatrix(test_x)	###
 watchlist=[(dtrain,'train'),(dtrain,'test')]
 #num_class=train_y.max()+1  
 params = {
-            'objective': 'reg:logistic',
-            'eta': 0.1,
+            'objective': 'reg:gamma',
+            'eta': 0.01,
             'eval_metric': 'rmse',
             #'eval_metric': 'mlogloss',
             'seed': 0,
             'missing': -999,
             #'num_class':num_class,
             'silent' : 1,
-            'gamma' : 2,
+            'gamma' : 1,
             'subsample' : 0.5,
             'alpha' : 0.5,
-            #'max_depth':2
+            'max_depth':9
             }
 num_rounds=1000
 
 #clf=xgb.train(params,dtrain,num_rounds,watchlist)
 clf=xgb.train(params,dtrain,num_rounds,watchlist)
 
-'''
-test_y_pred=pd.Series(clf.predict(dtest),index=test_x.index)
-test_y_pred=pd.DataFrame(clf.predict(dtest),index=test_x.index,columns=['Survived'])
-test_y['Survived']=test_y['Survived'].apply(int)
-test_y=test_y.reset_index()
-
-#way_out='/home/m/Titanic/result/11.20/'
-#test_y.to_csv(way_out+'result.csv')
-'''
-
-
-'''
-#self all test
-dtest_x_self=xgb.DMatrix(train_x)
-y_self=pd.Series(clf.predict(dtest_x_self)).apply(int)
-y_self=train['Survived']
-
-choice=y_self[y_self==y_self]
-right_num=len(choice[choice])	#the result is all right
-'''
 
 #self rate test
 dtest_x_self=xgb.DMatrix(test_x)
-test_y_pred=pd.Series(clf.predict(dtest_x_self),index=test_x.index)
-test_y_pred=test_y_pred*800000
+test_y_pred=pd.Series(clf.predict(dtest_x_self),index=test_y_real.index)
+#test_y_pred=test_y_pred*800000
 
-print(mean_squared_error(test_y_pred,test_y_real*800000))
-
-
-'''
-choice = y_pred==y_real
-right_num=len(choice[choice])	# 0.770949720670391
-print(float(right_num)/len(y_pred))
-'''
-
-
-
-
-
-
-
-
-
-
-
-
+print(math.sqrt(mean_squared_error(test_y_pred,test_y_real)))
 
 
 
 
 '''
-###############
-###############
-for i in train1_x.columns:
-    print(i+',,,'+str(type(train1_x[i][train1_x[i].notnull()].values[0])))
-#
-for i in range(a):
-    if train_x[j].dtype not in [int,float,bool]:
-        print(str(i)+',,,'+str(j)+',,,')
-        print(train_x[j].dtype)
-
-
+# real rate test
+dtest1_x_self=xgb.DMatrix(test1_x)
+test1_y_pred=pd.Series(clf.predict(dtest1_x_self),index=test1_x.index)*800000
+result=pd.DataFrame(test1_y_pred,columns=['SalePrice'])
+way_out='/media/m/文档/House Prices/data/result/'
+result.to_csv(way_out+'result.csv')
 '''
+
+
+
+
+
+
+
 
 
 
