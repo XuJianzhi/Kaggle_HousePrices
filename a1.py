@@ -1,4 +1,4 @@
-
+#7 删列 改为 换成0
 
 
 #!/usr/bin/python
@@ -36,10 +36,17 @@ test0_x=test0
 train1_x=train0_x.copy()
 test1_x=test0_x.copy()
 train1_y=train0_y.apply(float)/800000
+'''
 # 删有nan的列
 train1_x=train1_x.dropna(axis=1,how='any')
 #train1_x=train1_x.drop(['Heating','ExterCond','Exterior1st','Exterior2nd','Condition2','RoofMatl'],axis=1)
-
+'''
+# 换nan为0
+#not_0=train1_x.isnull().sum()[train1_x.isnull().sum()==0]
+have_nan=train1_x.isnull().sum()[train1_x.isnull().sum()!=0]
+test1_x[have_nan.index].fillna(0,inplace=True)
+test1_x.fillna(method='ffill',inplace=True)
+train1_x.fillna(0,inplace=True)
 
 
 
@@ -112,14 +119,14 @@ train_x=grid.fit(train_x,train1_y).transform(train_x)
 #test1_x=gus.transform(test1_x) 
 '''
 
-'''
-gus=GenericUnivariateSelect(param=40)
+
+gus=GenericUnivariateSelect(param=20)
 train_x=gus.fit_transform(train_x,train1_y) 
 #test1_x=gus.transform(test1_x) 
-'''
+
 
 '''
-pca=PCA(n_components=25)
+pca=PCA(n_components=30)
 train_x=pca.fit_transform(train_x,train1_y) 
 '''
 
