@@ -1,4 +1,4 @@
-
+#7 删列 改为 换成0
 
 
 #!/usr/bin/python
@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.feature_selection import GenericUnivariateSelect
+from sklearn.feature_selection import SelectPercentile,GenericUnivariateSelect
 import math
 
 way_data='/media/m/文档/House Prices/data/'
@@ -36,12 +36,19 @@ test0_x=test0
 train1_x=train0_x.copy()
 test1_x=test0_x.copy()
 train1_y=train0_y.apply(float)/800000
+'''
 # 删有nan的列
 train1_x=train1_x.dropna(axis=1,how='any')
 #train1_x=train1_x.drop(['Heating','ExterCond','Exterior1st','Exterior2nd','Condition2','RoofMatl'],axis=1)
-
-test1_x=test1_x[train1_x.columns]
+'''
+# 换nan为0
+#not_nan=train1_x.isnull().sum()[train1_x.isnull().sum()==0]
+have_nan=train1_x.isnull().sum()[train1_x.isnull().sum()!=0]
+test1_x[have_nan.index]=test1_x[have_nan.index].fillna(0)
 test1_x.fillna(method='ffill',inplace=True)
+train1_x.fillna(0,inplace=True)
+
+
 
 
 train_x=train1_x
@@ -104,11 +111,25 @@ for j in range(num_columns):
 
         #example=train1_x[i][train1_x[i].notnull()].values[0]
         #print(type(example))
-        
-gus=GenericUnivariateSelect(param=10)
+'''       
+sp=SelectPercentile()	#percentile=10
+params=[1,2,5,10,15,20,25,30,35,40,50,60,70,80]
+grid=GridSearchCV(sp,{'percentile':params})
+train_x=grid.fit(train_x,train1_y).transform(train_x)
+#test1_x=gus.transform(test1_x) 
+'''
+
+
+gus=GenericUnivariateSelect(param=75)
 train_x=gus.fit_transform(train_x,train1_y) 
 test1_x=gus.transform(test1_x) 
 
+
+'''
+pca=PCA(n_components=50)
+train_x=pca.fit_transform(train_x,train1_y) 
+test1_x=pca.transform(test1_x) 
+'''
 
 ########################
 
@@ -116,7 +137,7 @@ train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(trai
 
 ########################
 dtrain=xgb.DMatrix(train_x,train_y)
-dtest=xgb.DMatrix(test_x)	###
+#dtest=xgb.DMatrix(test_x)	###
 
 watchlist=[(dtrain,'train'),(dtrain,'test')]
 #num_class=train_y.max()+1  
@@ -134,7 +155,7 @@ params = {
             'alpha' : 0.5,
             'max_depth':9
             }
-num_rounds=500
+num_rounds=1000
 
 #clf=xgb.train(params,dtrain,num_rounds,watchlist)
 clf=xgb.train(params,dtrain,num_rounds,watchlist)
@@ -146,11 +167,11 @@ test_y_pred=pd.Series(clf.predict(dtest_x_self),index=test_y_real.index)
 #test_y_pred=test_y_pred*800000
 
 print(math.sqrt(mean_squared_error(test_y_pred,test_y_real)))
-
-
-
-
 '''
+
+
+
+
 # real rate test
 dtest1_x_self=xgb.DMatrix(test1_x)
 test1_y_pred=pd.Series(clf.predict(dtest1_x_self),index=test0_x.index)*800000
