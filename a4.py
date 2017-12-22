@@ -17,8 +17,8 @@ from sklearn.metrics import mean_squared_log_error
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.feature_selection import SelectKBest,chi2,SelectPercentile,GenericUnivariateSelect
-from sklearn.preprocessing import Imputer,OneHotEncoder,PolynomialFeatures
-
+from sklearn.preprocessing import Imputer,OneHotEncoder,PolynomialFeatures,RobustScaler
+import math
 
 way_data='/home/m/桌面/House Prices/data/'
 train0=pd.read_csv(way_data+'train.csv')
@@ -65,6 +65,10 @@ qualitative_1 = pd.DataFrame(encoder.fit_transform(qualitative_1),index=qualitat
 #定量补缺
 #imputer=Imputer(strategy='mean')
 #quantitative_1 = pd.DataFrame(imputer.fit_transform(quantitative_1),index=quantitative_1.index)
+#做scale变换
+rate_robust=40
+scale=RobustScaler(quantile_range=(50-rate_robust,50+rate_robust))
+quantitative_1 = pd.DataFrame(scale.fit_transform(quantitative_1),index=quantitative_1.index)
 #数据变换（升维）
 pf=PolynomialFeatures(degree=2,interaction_only=True,include_bias=False)
 quantitative_1 = pd.DataFrame(pf.fit_transform(quantitative_1),index=quantitative_1.index)
@@ -76,7 +80,7 @@ all_1.columns=np.arange(all_1.shape[1])
 #分成train和test
 train1_x=all_1.loc[train0_x.index,:]
 test1_x=all_1.loc[test0_x.index,:]
-train1_y=train0_y.copy()
+train1_y=train0_y.copy()#apply(lambda x:math.e**x)
 #train1_y=train0_y.apply(float)/800000
 #train1_y=train0_y.apply(float)
 '''
@@ -113,7 +117,7 @@ def evalerror(preds, dtrain):
 
 params = {
             'objective': 'reg:gamma',
-            'eta': 0.002,
+            'eta': 0.01,
             'seed': 0,
             'missing': -999,
             #'num_class':num_class,
@@ -124,9 +128,17 @@ params = {
             'max_depth':4,
             'min_child_weight':1
             }
-num_rounds=20000
+num_rounds=5000
 clf=xgb.train(params,dtrain,num_rounds,watchlist, feval=evalerror)
+'''
+#self rate test
+dtest_x_self=xgb.DMatrix(test_x)
+test_y_pred=pd.Series(clf.predict(dtest_x_self),index=test_y_real.index)
+#test_y_pred=test_y_pred*800000
 
+print(math.sqrt(mean_squared_log_error(test_y_pred,test_y_real)))
+#print(math.sqrt(mean_squared_log_error(test_y_pred.apply(math.log),test_y_real.apply(math.log))))
+'''
 
 
 
