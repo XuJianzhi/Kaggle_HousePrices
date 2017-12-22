@@ -25,45 +25,73 @@ train0_x=train0.iloc[:,:-1]
 train0_y=train0.SalePrice
 test0_x=test0
 
-
-
 ##########################################
+
+
 # copy
 train1_x=train0_x.copy()
 test1_x=test0_x.copy()
+train1_y=train0_y.apply(float)/800000
 
-num_columns=len(train1_x.columns)
-columns_train1_x=train1_x.columns
+
+train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.2)
+
+
+##########################################
+
+num_columns=len(train_x.columns)
+columns_train_x=train_x.columns
 # change type to int
 for j in range(num_columns):
-    i=columns_train1_x[j]
+    i=columns_train_x[j]
     print('j='+str(j)+',,,i='+i)
     #example=train1_x[i][train1_x[i].notnull()].values[0]
-    print(train1_x[i].dtype)
+    print(train_x[i].dtype)
+    
+    
+    # jiangwei 
+    if float(sum(train_x[i].value_counts())) / len(train_x[i]) < 0.7:	#不能有太多nan
+        print('///////////////**********///////')
+        train_x.drop(i,inplace=True,axis=1)
+        test_x.drop(i,inplace=True,axis=1)
+        test1_x.drop(i,inplace=True,axis=1)
+        continue
+    if float(len(train_x[i].unique())) / len(train_x[i]) > 0.3:		#种类不能太多
+        print('KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK')
+        train_x.drop(i,inplace=True,axis=1)
+        test_x.drop(i,inplace=True,axis=1)
+        test1_x.drop(i,inplace=True,axis=1)
+        continue
+    if float(train_x[i].value_counts().values[0]) / len(train_x[i]) > 0.7:		#不能出现一个寡头
+        print('ddddddddddddddddddddddddddddddddd')
+        train_x.drop(i,inplace=True,axis=1)
+        test_x.drop(i,inplace=True,axis=1)
+        test1_x.drop(i,inplace=True,axis=1)
+        continue
+
+
     #if type(example) not in [int, float, bool]:
     #if type(example) == str:
-    if train1_x[i].dtype == 'object':
+    if train_x[i].dtype == 'object':
         print('j='+str(j)+',,,i='+i+',,,1111')
         # encoder start
         lbl=sk.preprocessing.LabelEncoder()
-        train1_x[i][train1_x[i].notnull()]=lbl.fit_transform(train1_x[i][train1_x[i].notnull()])
-        train1_x[i] = train1_x[i].convert_objects(convert_numeric=True)
+        train_x[i][train_x[i].notnull()]=lbl.fit_transform(train_x[i][train_x[i].notnull()])
+        train_x[i] = train_x[i].convert_objects(convert_numeric=True)
+        
+        test_x[i][test_x[i].notnull()]=lbl.transform(test_x[i][test_x[i].notnull()])
+        test_x[i] = test_x[i].convert_objects(convert_numeric=True)
+        
         test1_x[i][test1_x[i].notnull()]=lbl.transform(test1_x[i][test1_x[i].notnull()])
         test1_x[i] = test1_x[i].convert_objects(convert_numeric=True)
 
         #example=train1_x[i][train1_x[i].notnull()].values[0]
         #print(type(example))
     
-    # jiangwei 
-    if float(sum(train1_x[i].value_counts().values[:5]))/len(train1_x[i]) < 0.5:
-        print('///////////////**********///////')
-        train1_x.drop(i,inplace=True,axis=1)
-        test1_x.drop(i,inplace=True,axis=1)
     
-train1_y=train0_y.apply(float)/800000
 ########################
 
-train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.2)
+#train_x, test_x, train_y, test_y_real = sk.model_selection.train_test_split(train1_x,train1_y,test_size=0.2)
 
 ########################
 dtrain=xgb.DMatrix(train_x,train_y)
